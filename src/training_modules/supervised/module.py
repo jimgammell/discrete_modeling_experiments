@@ -9,6 +9,8 @@ import models
 class Module(L.LightningModule):
     def __init__(self,
         classifier_name: str,
+        input_shape: Sequence[int],
+        output_classes: int,
         classifier_kwargs: dict = {},
         lr: float = 2e-4,
         beta_1: float = 0.9,
@@ -19,7 +21,7 @@ class Module(L.LightningModule):
         self.save_hyperparameters()
         self.automatic_optimization = False
         
-        self.classifier = models.load(self.hparams.classifier_name, **self.hparams.classifier_kwargs)
+        self.classifier = models.load(self.hparams.classifier_name, input_shape, output_classes, **self.hparams.classifier_kwargs)
     
     def configure_optimizers(self):
         self.optimizer = optim.Adam(self.classifier.parameters(), lr=self.hparams.lr, betas=(self.hparams.beta_1, self.hparams.beta_2), eps=self.hparams.eps)

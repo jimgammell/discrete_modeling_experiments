@@ -9,8 +9,8 @@ class DataModule(L.LightningDataModule):
         train_dataset: Dataset,
         test_dataset: Dataset,
         val_prop: float = 0.2,
-        train_batch_size: int = 256,
-        eval_batch_size: int = 10000,
+        train_batch_size: Optional[int] = 256,
+        eval_batch_size: Optional[int] = 256,
         dataloader_kwargs: dict = {}
     ):
         super().__init__()
@@ -31,14 +31,18 @@ class DataModule(L.LightningDataModule):
     
     def setup(self, stage: str):
         stage = None
-        self.val_length = int(self.val_prop*len(self.train_dataset))
-        self.train_length = len(self.train_dataset) - self.val_length
+        self.val_length = int(self.val_prop*len(self.base_train_dataset))
+        self.train_length = len(self.base_train_dataset) - self.val_length
         if (self.train_indices is None) or (self.val_indices is None):
-            indices = np.random.choice(len(self.train_dataset), len(self.train_dataset), replace=False)
+            indices = np.random.choice(len(self.base_train_dataset), len(self.base_train_dataset), replace=False)
             self.train_indices = indices[:self.train_length]
             self.val_indices = indices[self.train_length:]
         self.train_dataset = Subset(self.base_train_dataset, self.train_indices)
         self.val_dataset = Subset(self.base_train_dataset, self.val_indices)
+        if self.train_batch_size is None:
+            self.train_batch_size = len(self.train_dataset)
+        if self.eval_batch_size is None:
+            self.eval_batch_size = len(self.val_dataset)
     
     def train_dataloader(self, override_batch_size: Optional[int] = None):
         batch_size = min(self.train_batch_size if override_batch_size is None else override_batch_size, len(self.train_dataset))

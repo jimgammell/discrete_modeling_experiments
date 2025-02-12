@@ -1,0 +1,1 @@
+from .weight_quantization.trial import Trial as WeightQuantizationTrial

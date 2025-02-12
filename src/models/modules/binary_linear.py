@@ -15,20 +15,20 @@ class BinaryLinear(RebarModule):
         if self.bias:
             self.in_dims += 1
         
-        self.weight_logits = nn.Parameter(torch.empty(self.in_dims, self.out_dims, dtype=torch.float32), requires_grad=True)
-        self.scalar = nn.Parameter(torch.tensor(np.log(np.exp(0)-1), dtype=torch.float32), requires_grad=True)
+        self.weight_logits = nn.Parameter(torch.empty(self.out_dims, self.in_dims, dtype=torch.float32), requires_grad=True)
+        self.scalar = nn.Parameter(torch.tensor(np.log(np.exp(1)-1), dtype=torch.float32), requires_grad=True)
         
         # Initialize weights to something analogous to nn.init.xavier_uniform_, based on assumption that tanh(x) == x for small x.
-        fan_in, fan_out = nn.init._calculate_fan_in_and_fan_out(self.weight_logits[:-1, :])
+        fan_in, fan_out = nn.init._calculate_fan_in_and_fan_out(self.weight_logits[:, :-1])
         gain = nn.init.calculate_gain('relu')
         a_xavier = gain*np.sqrt(6./(fan_in + fan_out))
         a = np.log1p(a_xavier) - np.log1p(-a_xavier)
-        nn.init.uniform_(self.weight_logits[:-1, :], a=-a, b=a)
-        nn.init.constant_(self.weight_logits[-1, :], 0)
+        nn.init.uniform_(self.weight_logits[:, :-1], a=-a, b=a)
+        nn.init.constant_(self.weight_logits[:, -1], 0)
         
     def get_weights(self, batch_size: int, temperature: Optional[torch.Tensor] = None):
-        log_probs = nn.functional.logsigmoid(self.weight_logits).reshape(1, self.in_dims, self.out_dims).expand(batch_size, 1, 1)
-        log_1mprobs = nn.functional.logsigmoid(-self.weight_logits).reshape(1, self.in_dims, self.out_dims).expand(batch_size, 1, 1)
+        log_probs = nn.functional.logsigmoid(self.weight_logits).reshape(1, self.in_dims, self.out_dims).expand(batch_size, self.in_dims, self.out_dims)
+        log_1mprobs = nn.functional.logsigmoid(-self.weight_logits).reshape(1, self.in_dims, self.out_dims).expand(batch_size, self.in_dims, self.out_dims)
         log_alpha = log_probs - log_1mprobs
         u = self.rand_like(log_probs)
         binary_weights = torch.where(log_alpha + u.log() - (1-u).log() >= 0, torch.ones_like(u), torch.zeros_like(u))
@@ -48,22 +48,21 @@ class BinaryLinear(RebarModule):
     def forward(self, x):
         batch_size, *dims = x.shape
         if self.bias:
-            x = torch.cat([x, torch.ones_like(x[..., 0])], dim=-1)
-        if x.size() > 2:
-            x = x.reshape(-1, dims[-1])
+            x = torch.cat([x, torch.ones_like(x[..., 0, None])], dim=-1)
         if self.training:
             tau = self.get_rebar_tau()
             eta = self.get_rebar_eta()
             weights, log_probs = self.get_weights(batch_size, temperature=tau)
             binary_out, relaxed_out, relaxed_out_tilde, relaxed_out_tilde_detached = map(
-                lambda weight: torch.bmm(2.*weight - 1., x.unsqueeze(-1)).squeeze(-1), weights
+                lambda weight: torch.bmm(x.unsqueeze(-2), 2.*weight - 1.).squeeze(-2), weights
             )
-            rebar_out = (binary_out - eta*relaxed_out_tilde_detached)*log_probs + eta*relaxed_out - eta*relaxed_out_tilde
+            rebar_out = (binary_out - eta*relaxed_out_tilde_detached)*log_probs.unsqueeze(-1) + eta*relaxed_out - eta*relaxed_out_tilde
             out = binary_out.detach() + rebar_out - rebar_out.detach()
             out = out * nn.functional.softplus(self.scalar)
         else:
             weights = self.get_weights(batch_size)
-            weights = weights.expand(x.shape)
-            out = torch.bmm(weights, x.unsqueeze(-1)).squeeze(-1)
-        out = out.reshape(batch_size, *dims[:-1], self.out_dims)
+            out = torch.bmm(x.unsqueeze(-2), 2.*weights - 1).squeeze(-2)
         return out
+    
+    def __repr__(self):
+        return f'{self.__class__.__name__}(in_dims={self.in_dims-1}, out_dims={self.out_dims}, bias={self.bias})'
