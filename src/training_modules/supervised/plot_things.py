@@ -11,6 +11,7 @@ def plot_training_curves(training_curves, save_dir):
     axes[1].plot(*training_curves['val_acc'], color='blue', linestyle='-', label='val', **PLOT_KWARGS)
     axes[0].set_xlabel('Training step')
     axes[0].set_ylabel('Loss')
+    axes[0].set_yscale('log')
     axes[1].set_xlabel('Training step')
     axes[1].set_ylabel('Accuracy')
     fig.tight_layout()

@@ -4,9 +4,9 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..modules import BinaryLinear
+from ..modules import TernaryLinear
 
-class BinaryMLP(nn.Module):
+class TernaryMLP(nn.Module):
     def __init__(self, input_shape: Sequence[int], output_classes: int, hidden_layer_count: int = 1, hidden_layer_dim: int = 2048):
         super().__init__()
         self.input_shape = input_shape
@@ -18,11 +18,11 @@ class BinaryMLP(nn.Module):
         in_dims = np.prod(self.input_shape)
         out_dims = self.hidden_layer_dim
         for layer_idx in range(self.hidden_layer_count):
-            modules.append((f'layer_{layer_idx+1}', BinaryLinear(in_dims, out_dims)))
+            modules.append((f'layer_{layer_idx+1}', TernaryLinear(in_dims, out_dims)))
             modules.append((f'relu_{layer_idx+1}', nn.ReLU()))
             in_dims = out_dims
             out_dims = self.hidden_layer_dim
-        modules.append(('output_layer', BinaryLinear(in_dims, self.output_classes)))
+        modules.append(('output_layer', TernaryLinear(in_dims, self.output_classes)))
         self.model = nn.Sequential(OrderedDict(modules))
     
     def forward(self, x):

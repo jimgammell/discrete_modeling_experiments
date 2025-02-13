@@ -10,7 +10,7 @@ class DataModule(L.LightningDataModule):
         test_dataset: Dataset,
         val_prop: float = 0.2,
         train_batch_size: Optional[int] = 256,
-        eval_batch_size: Optional[int] = 256,
+        eval_batch_size: Optional[int] = None,
         dataloader_kwargs: dict = {}
     ):
         super().__init__()
