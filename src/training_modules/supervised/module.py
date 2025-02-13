@@ -4,6 +4,7 @@ from torch import nn, optim
 import lightning as L
 
 from ..utils import *
+from utils import lr_schedulers
 import models
 
 class Module(L.LightningModule):
@@ -12,20 +13,44 @@ class Module(L.LightningModule):
         input_shape: Sequence[int],
         output_classes: int,
         classifier_kwargs: dict = {},
+        lr_scheduler_name: str = None,
+        lr_scheduler_kwargs: dict = {},
         lr: float = 2e-4,
         beta_1: float = 0.9,
         beta_2: float = 0.999,
-        eps: float = 1e-8
+        eps: float = 1e-8,
+        weight_decay: float = 0.0,
+        compile_model: bool = False
     ):
         super().__init__()
         self.save_hyperparameters()
         self.automatic_optimization = False
         
         self.classifier = models.load(self.hparams.classifier_name, input_shape, output_classes, **self.hparams.classifier_kwargs)
+        if compile_model:
+            self.classifier = torch.compile(self.classifier)
     
     def configure_optimizers(self):
-        self.optimizer = optim.Adam(self.classifier.parameters(), lr=self.hparams.lr, betas=(self.hparams.beta_1, self.hparams.beta_2), eps=self.hparams.eps)
-        return {'optimizer': self.optimizer}
+        yes_weight_decay, no_weight_decay = [], []
+        for name, param in self.classifier.named_parameters():
+            if 'weight_logits' in name:
+                yes_weight_decay.append(param)
+            else:
+                no_weight_decay.append(param)
+        param_groups = [{'params': yes_weight_decay, 'weight_decay': self.hparams.weight_decay}, {'params': no_weight_decay, 'weight_decay': 0.0}]
+        self.optimizer = optim.AdamW(param_groups, lr=self.hparams.lr, betas=(self.hparams.beta_1, self.hparams.beta_2), eps=self.hparams.eps)
+        rv = {'optimizer': self.optimizer}
+        if self.hparams.lr_scheduler_name is not None:
+            if self.trainer.max_epochs != -1:
+                total_steps = self.trainer.max_epochs*len(self.trainer.datamodule.train_dataloader())
+            elif self.trainer.max_steps != -1:
+                total_steps = self.trainer.max_steps
+            else:
+                assert False
+            lr_scheduler_constructor = getattr(lr_schedulers, self.hparams.lr_scheduler_name)
+            self.lr_scheduler = lr_scheduler_constructor(self.optimizer, total_steps, **self.hparams.lr_scheduler_kwargs)
+            rv.update({'lr_scheduler': self.lr_scheduler})
+        return rv
     
     def unpack_batch(self, batch):
         x, y = batch
@@ -36,6 +61,7 @@ class Module(L.LightningModule):
         if train:
             optimizer = self.optimizers()
             optimizer.zero_grad()
+            lr_scheduler = self.lr_schedulers()
         x, y = self.unpack_batch(batch)
         batch_size = x.size(0)
         rv = {}
@@ -46,6 +72,8 @@ class Module(L.LightningModule):
             self.manual_backward(loss)
             rv.update({'rms_grad': get_rms_grad(self.classifier)})
             optimizer.step()
+            if lr_scheduler is not None:
+                lr_scheduler.step()
         assert all(torch.all(torch.isfinite(param)) for param in self.classifier.parameters())
         return rv
     

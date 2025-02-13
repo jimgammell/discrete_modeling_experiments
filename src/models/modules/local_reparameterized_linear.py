@@ -3,7 +3,13 @@ import torch
 from torch import nn
 
 class TernaryLinear(nn.Module):
-    def __init__(self, in_dims: int, out_dims: int, p_max: float = 0.95, l2_penalty_coeff: float = 1e-12, scale_and_shift: bool = True):
+    def __init__(self,
+        in_dims: int,
+        out_dims: int,
+        p_max: float = 0.95,
+        l2_penalty_coeff: float = 0.0,
+        scale_and_shift: bool = True
+    ):
         super().__init__()
         
         self.in_dims = in_dims

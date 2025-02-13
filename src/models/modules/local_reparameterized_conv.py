@@ -10,7 +10,7 @@ class TernaryConv2d(nn.Module):
         kernel_size: Union[int, Tuple[int]],
         stride: Union[int, Tuple[int]] = 1,
         padding: Union[int, Tuple[int]] = 0,
-        l2_penalty_coeff: float = 1e-12,
+        l2_penalty_coeff: float = 0.0,
         scale_and_shift: bool = True,
         dilation: Union[int, Tuple[int]] = 1,
         groups: int = 1,

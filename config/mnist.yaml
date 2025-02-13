@@ -7,8 +7,14 @@ weight_quantization:
     classifier_kwargs:
       base_channels: 32
       dense_width: 128
+    lr_scheduler_name: CosineDecayLRSched
+    lr_scheduler_kwargs:
+      warmup_prop: 0.2
+      const_prop: 0.4
     lr: 1.e-3
     beta_1: 0.9
     beta_2: 0.999
     eps: 1.e-8
+    weight_decay: 1.e-4
+    compile_model: true
   max_epochs: 100
