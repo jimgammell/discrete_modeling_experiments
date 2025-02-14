@@ -6,7 +6,7 @@ import argparse
 from common import *
 from trials import WeightQuantizationTrial
 
-AVAILABLE_DATASETS = ['mnist']
+AVAILABLE_DATASETS = ['mnist', 'cifar10']
 TRIAL_TYPES = ['weight-quantization']
 
 def run_weight_quantization_trial(args, config):

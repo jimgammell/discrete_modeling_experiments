@@ -34,9 +34,13 @@ class _TernaryModule(nn.Module):
             self.shift = nn.Parameter(torch.full(self.scale_and_shift_dims, torch.nan, dtype=self.logits_dtype, device=self.device), requires_grad=True)
         self.register_buffer('eval_weight', torch.full(self.weight_dims, torch.nan, dtype=self.logits_dtype, device=self.device))
         self.stale_eval_params = True
+        self.reset_params()
         
-        p_0 = self.p_max - (self.p_max - self.p_min)*self.initial_weights.abs()
-        p_1 = 0.5*(1 + self.initial_weights/(1 - p_0))
+    def reset_params(self, initial_weights: Optional[torch.Tensor] = None):
+        if initial_weights is None:
+            initial_weights = self.initial_weights
+        p_0 = self.p_max - (self.p_max - self.p_min)*initial_weights.abs()
+        p_1 = 0.5*(1 + initial_weights/(1 - p_0))
         p_0 = p_0.clamp(self.p_min, self.p_max)
         p_1 = p_1.clamp(self.p_min, self.p_max)
         self.weight_logits.data[..., 0] = np.log(p_0) - np.log1p(-p_0)
@@ -66,7 +70,8 @@ class _TernaryModule(nn.Module):
         weight_var = weight_p_mag - weight_p_mag.pow(2)*(2*weight_p_sgn - 1).pow(2)
         out_mean = self.linear_fn(x, weight_mean)
         out_var = self.linear_fn(x.pow(2), weight_var)
-        out = out_mean + out_var.sqrt()*torch.randn_like(out_var)
+        out_std = out_var.clamp(min=1e-4).sqrt() # clamping necessary for numerical stability
+        out = out_mean + out_std*torch.randn_like(out_var)
         out = self.apply_scale_and_shift(out)
         return out
     

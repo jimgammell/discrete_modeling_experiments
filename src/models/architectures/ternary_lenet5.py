@@ -26,11 +26,12 @@ class TernaryLeNet5(nn.Module):
             ('pool2', nn.MaxPool2d(2))
         ]))
         self.dense_stage = nn.Sequential(OrderedDict([
-            ('dense1', TernaryLinear(2*self.base_channels*(self.input_shape[1]//4)*(self.input_shape[2]//4), self.dense_width, scale_and_shift=False)),
-            ('norm1', nn.BatchNorm1d(self.dense_width)),
+            ('dense1', TernaryLinear(2*self.base_channels*(self.input_shape[1]//4)*(self.input_shape[2]//4), self.dense_width, scale_and_shift=True)),
+            ('dropout', nn.Dropout(0.5)),
             ('act1', nn.ReLU()),
-            ('dense2', TernaryLinear(self.dense_width, self.output_classes))
+            ('dense2', nn.Linear(self.dense_width, self.output_classes, bias=False))
         ]))
+        nn.init.xavier_uniform_(self.dense_stage.dense2.weight)
     
     def forward(self, x):
         batch_size, *dims = x.shape

@@ -18,6 +18,7 @@ OUTPUT_DIR = os.path.join(PROJ_DIR, 'outputs')
 CONFIG_DIR = os.path.join(PROJ_DIR, 'config')
 RESOURCE_DIR = os.path.join(PROJ_DIR, 'resources')
 MNIST_DIR = os.path.join(RESOURCE_DIR, 'mnist')
+CIFAR10_DIR = os.path.join(RESOURCE_DIR, 'cifar10')
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(CONFIG_DIR, exist_ok=True)

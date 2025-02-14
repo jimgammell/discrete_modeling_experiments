@@ -19,7 +19,8 @@ class Module(L.LightningModule):
         beta_1: float = 0.9,
         beta_2: float = 0.999,
         eps: float = 1e-8,
-        weight_decay: float = 0.0,
+        ternary_weight_decay: float = 1e-12,
+        full_precision_weight_decay: float = 1.e-4,
         compile_model: bool = False
     ):
         super().__init__()
@@ -31,13 +32,19 @@ class Module(L.LightningModule):
             self.classifier = torch.compile(self.classifier)
     
     def configure_optimizers(self):
-        yes_weight_decay, no_weight_decay = [], []
+        ternary_weight_decay, full_precision_weight_decay, no_weight_decay = [], [], []
         for name, param in self.classifier.named_parameters():
             if 'weight_logits' in name:
-                yes_weight_decay.append(param)
+                ternary_weight_decay.append(param)
+            elif ('weight' in name) and not('norm' in name):
+                full_precision_weight_decay.append(param)
             else:
                 no_weight_decay.append(param)
-        param_groups = [{'params': yes_weight_decay, 'weight_decay': self.hparams.weight_decay}, {'params': no_weight_decay, 'weight_decay': 0.0}]
+        param_groups = [
+            {'params': ternary_weight_decay, 'weight_decay': self.hparams.ternary_weight_decay},
+            {'params': full_precision_weight_decay, 'weight_decay': self.hparams.full_precision_weight_decay},
+            {'params': no_weight_decay, 'weight_decay': 0.0}
+        ]
         self.optimizer = optim.AdamW(param_groups, lr=self.hparams.lr, betas=(self.hparams.beta_1, self.hparams.beta_2), eps=self.hparams.eps)
         rv = {'optimizer': self.optimizer}
         if self.hparams.lr_scheduler_name is not None:
@@ -70,6 +77,7 @@ class Module(L.LightningModule):
         rv.update({'loss': loss.detach(), 'acc': (logits.detach().argmax(dim=-1) == y).sum()/batch_size})
         if train:
             self.manual_backward(loss)
+            #nn.utils.clip_grad_norm_(self.classifier.parameters(), max_norm=1.0)
             rv.update({'rms_grad': get_rms_grad(self.classifier)})
             optimizer.step()
             if lr_scheduler is not None:

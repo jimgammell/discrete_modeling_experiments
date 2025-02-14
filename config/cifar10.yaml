@@ -1,16 +1,10 @@
 weight_quantization:
   module_kwargs:
-    classifier_name: ternary-lenet5
-    #classifier_kwargs:
-    #  hidden_layer_count: 1
-    #  hidden_layer_dim: 2048
-    classifier_kwargs:
-      base_channels: 32
-      dense_width: 512
+    classifier_name: ternary-resnet-18
     lr_scheduler_name: CosineDecayLRSched
     lr_scheduler_kwargs:
-      warmup_prop: 0.0
-      const_prop: 0.5
+      warmup_prop: 0.05
+      const_prop: 0.15
     lr: 1.e-2
     beta_1: 0.9
     beta_2: 0.999
@@ -18,4 +12,4 @@ weight_quantization:
     ternary_weight_decay: 1.e-11
     full_precision_weight_decay: 1.e-4
     compile_model: true
-  max_epochs: 200
+  max_epochs: 25
