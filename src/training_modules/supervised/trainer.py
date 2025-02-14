@@ -57,8 +57,8 @@ class Trainer:
             trainer.fit(training_module, datamodule=self.data_module)
             trainer.save_checkpoint(os.path.join(save_dir, 'final_checkpoint.ckpt'))
             extract_training_curves(save_dir)
-            training_curves = load_training_curves(save_dir)
-            plot_training_curves(training_curves, save_dir)
+        training_curves = load_training_curves(save_dir)
+        plot_training_curves(training_curves, save_dir)
     
     def hparam_tune(self,
         save_dir: Union[str, os.PathLike],

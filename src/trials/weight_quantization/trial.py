@@ -34,5 +34,5 @@ class Trial:
         self.optimal_settings = trainer.hparam_tune(experiment_dir, max_epochs=self.max_epochs)
     
     def __call__(self):
-        self.run_hparam_sweep()
+        #self.run_hparam_sweep()
         self.do_final_run()

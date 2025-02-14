@@ -49,7 +49,7 @@ class _TernaryModule(nn.Module):
     def refresh_eval_params(self):
         if self.stale_eval_params:
             weight_mag = (self.weight_logits[..., 0] > 0).to(torch.float32)
-            weight_sgn = 2*(self.weight_logits[..., 1] > 0).to(torch.float32)
+            weight_sgn = 2*(self.weight_logits[..., 1] > 0).to(torch.float32) - 1
             self.eval_weight = weight_sgn*weight_mag
             self.stale_eval_params = False
     
