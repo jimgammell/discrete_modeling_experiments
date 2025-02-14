@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..modules import TernaryLinear
+from ..local_reparameterized_modules import TernaryLinear
 
 class TernaryMLP(nn.Module):
     def __init__(self, input_shape: Sequence[int], output_classes: int, hidden_layer_count: int = 1, hidden_layer_dim: int = 2048):

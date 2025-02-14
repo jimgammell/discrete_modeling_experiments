@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..modules import TernaryLinear, TernaryConv2d
+from ..local_reparameterized_modules import TernaryLinear, TernaryConv2d
 
 class TernaryLeNet5(nn.Module):
     def __init__(self, input_shape: Sequence[int], output_classes: int, base_channels: int = 32, dense_width: int = 128):
