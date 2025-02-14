@@ -1,4 +1,5 @@
 import os
+from copy import copy
 from typing import *
 
 from common import *
@@ -14,13 +15,24 @@ class Trial:
         self.max_epochs = max_epochs
         self.train_dataset, self.test_dataset = datasets.load_dataset(self.dataset_name)
         self.final_run_dir = os.path.join(self.save_dir, 'final_run')
+        self.hparam_sweep_dir = os.path.join(self.save_dir, 'hparam_sweep')
+        self.optimal_settings = {}
     
     def do_final_run(self):
         for seed in range(self.seed_count):
             subdir = os.path.join(self.final_run_dir, f'seed={seed}')
             os.makedirs(subdir, exist_ok=True)
-            trainer = SupervisedTrainer(self.train_dataset, self.test_dataset, base_module_kwargs=self.module_kwargs)
+            base_module_kwargs = copy(self.module_kwargs)
+            base_module_kwargs.update(self.optimal_settings)
+            trainer = SupervisedTrainer(self.train_dataset, self.test_dataset, base_module_kwargs=base_module_kwargs)
             trainer.run(subdir, max_epochs=self.max_epochs)
     
+    def run_hparam_sweep(self):
+        experiment_dir = os.path.join(self.hparam_sweep_dir)
+        os.makedirs(experiment_dir, exist_ok=True)
+        trainer = SupervisedTrainer(self.train_dataset, self.test_dataset, base_module_kwargs=self.module_kwargs)
+        self.optimal_settings = trainer.hparam_tune(experiment_dir, max_epochs=self.max_epochs)
+    
     def __call__(self):
+        self.run_hparam_sweep()
         self.do_final_run()
